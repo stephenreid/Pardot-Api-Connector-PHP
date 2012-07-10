@@ -1,4 +1,4 @@
-PARDOT API Connctor
+PARDOT API Connector
 ==================
 This Repo has some sample PHP scripts of using the Pardot API.
 
