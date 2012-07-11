@@ -30,6 +30,12 @@ class Prospect
 		}
 		//else we have a blank slate
 	}
+	/**
+	 * getConnection
+	 * Returns our cached connector if we have it
+	 * Creates a new one otherwise
+	 * @return PardotConnector
+	 */
 	public function getConnection(){
 		$connection = $this->connection;
 		if ($connection===null){
@@ -74,7 +80,7 @@ class Prospect
 			//authenticate
 			$conn = $this->getConnection();
 			//query
-			$p = $conn->prospectGetByEmail($email);
+			$p = $conn->prospectRead(array('email'=>$email));
 
 			//localize
 			$prospect = new Prospect();//initialize one of my own
