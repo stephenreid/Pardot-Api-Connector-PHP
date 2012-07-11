@@ -4,19 +4,95 @@
  * The important parts here are the authenticate, send, and various prospect functions
  * Check out Prospect.class.php as a way to manipulate prospects.
  * @author stephenreid
- * @since 7/14/2011
+ * @since 7/10/2012
  * @desc A connecting class to the pardot api
+ * 
+ * 
+ * @method simpleXmlObject accountRead() accountRead() Read account information
+ * @method simpleXmlObject
+ *  create($objectType,$object)
+ * @method array
+ * 	query($objectType,$queryParameters)
+ * 	Runs the query action against an object type
+ * @method simpleXmlObject
+ * 	read($objectType, $identifierAssosciativeArray)
+ * @method simpleXmlObject
+ * 	update($objectType, $object)
+ * @method simpleXmlObject
+ * 	upsert($objectType, $object)
+ * @method object accountRead()
+ * 
+ * @method object campaignCreate($object)
+ * @method object campaignQuery($criteria)
+ * @method object campaignRead($criteria)
+ * @method object campaignUpdate($object)
+ * 
+ * @method object customFieldQuery($criteria)
+ * @method object customFieldRead($criteria)
+ * 
+ * @method object customRedirectQuery($criteria)
+ * @method object customRedirectRead($criteria)
+ * 
+ * @method object visitorQuery($criteria)
+ * @method object visitorRead($criteria)
+ * 
+ * @method object formQuery($criteria)
+ * @method object formRead($criteria)
+ * 
+ * @method object listQuery($criteria)
+ * @method object listRead($criteria)
+ * 
+ * @method object opportunityQuery($criteria)
+ * @method object opportunityRead($criteria)
+ * @method object opportunityUpdate($criteria)
+ * 
+ * @method object prospectCreate($object)
+ * @method object prospectQuery($criteria)
+ * @method object prospectRead($criteria)
+ * @method object prospectUpdate($object)
+ * @method object prospectUpsert($object)
+ * 
+ * @method object userQuery($criteria)
+ * @method object userRead($criteria)
+ * 
+ * 
+ * @method object visitorActivityQuery($criteria)
+ * @method object visitorActivityRead($criteria)
+ * 
+ * @method object visitorQuery($criteria)
+ * @method object visitorRead($criteria)
+ * 
+ * @method object visitQuery($criteria)
+ * @method object visitRead($criteria)
+ *
+ * 
  */
 class PardotConnector
 {
 	//A flag for echoing debug output
 	private $debug 		= false;
 	private $apiKey		= null;
-	private $outputMode	= 'full'; // choose between 'simple','full','mobile'
+	private $outputMode	= 'simple'; // choose between 'simple','full','mobile'
 
-//	private $email = getEnv('PARDOT_EMAIL);
-//	private $password = getEnv(;
-	private $userKey = '####';
+	/** It's Best if you set Authentication Through Your Server Environment Vars not Files **/
+	private $email = '';
+	private $password = '';
+	private $userKey = '';
+
+	private $objectTypes = array(
+		'account',
+		'campaign',
+		'customField',
+		'customRedirect',
+		'form',
+		'list',
+		'opportununity',
+		'prospect',
+		'user',
+		'visitorActivity',
+		'visitor'
+	);
+
 
 
 	/**
@@ -26,7 +102,39 @@ class PardotConnector
 	public function __construct()
 	{
 	}
+	public function __call($name,$args = array())
+	{
+		if($name === 'create'){
+			return $this->send($args['0'],$name,$args['1'])->$args['0'];
+		} else if($name === 'query'){
+			return $this->baseQuery($args['0'], $args['1']);
+		} elseif($name === 'read'){
+			return $this->send($args['0'],$name,$args['1'])->$args['0'];
+		} elseif($name === 'update'){
+			return $this->send($args['0'],$name,$args['1'])->$args['0'];
+		} elseif($name === 'upsert'){
+			return $this->send($args['0'],$name,$args['1'])->$args['0'];
+		}
 
+		//Revserse sort this, so we have longest words first
+		sort($this->objectTypes);
+		$objectTypes = array_reverse($this->objectTypes);
+		
+		
+		foreach($objectTypes as $type){
+			if(strpos($name,$type)===0){
+				$action = strtolower(str_replace($type, '', $name));
+				if(count($args)===0){
+					return $this->$action($type,$args);
+				} else {
+					return $this->$action($type,$args[0]);
+					
+				}
+			}
+		}
+		return false;
+
+	}	
 	public function authenticate($username=null,$password=null,$userKey=null){
 		//gets a user api key back
 		if($username!=null){
@@ -39,310 +147,25 @@ class PardotConnector
 		$this->apiKey=$ret->api_key;//add error handling to this later
 		return $ret;
 	}
+
+
 	/**
-	 * accountRead
-	 * Reads the properties of an account
-	 * @param unknown_type $identifier Null, accounts are one per login
-	 * @return SimpleXMLElement Pardot Account
+	 * baseQuery
+	 * Because queries are expect to return multiples, undo the first layer
+	 * of nesting in the simpleXml object
+	 * @param $objectType (The type of object we're querying)
+	 * @param $queryParams (array of query critiera
 	 */
-	public function accountRead($identifier=null)
+	private function baseQuery($objectType,$queryParams)
 	{
-		$ret = $this->send('account','read',array());
-		return $ret;
-	}
-	/**
-	 * campaignCreate
-	 * Create a campaign
-	 * @param array $params array('name','cost')
-	 */
-	public function campaignCreate($params)
-	{
-		$ret = $this->send('campaign','create',$params);
-		return $ret;
-	}
-	/**
-	 * campaigQuery
-	 * Get a list of campaigns
-	 * @param array $params
-	 */
-	public function campaignQuery($params=array())
-	{
-		$ret = $this->send('campaign','query',$params);
-		return $ret;
-	}
-	/**
-	 * campaignRead
-	 * Read the details of a campaign
-	 * @param unknown_type $identifier
-	 */
-	public function campaignRead($identifier)
-	{
-		$ret = $this->send('campaign','read',array('id'=>$identifier));
-		return $ret;
-	}
-	/**
-	 * campaignUpdate
-	 * Update the cost or name of a campaign, based on the id.
-	 * @param unknown_type $identifier
-	 * @param unknown_type $params Campaign Name and Cost
-	 * @return SimpleXMLElement Pardot Campaign
-	 */
-	public function campaignUpdate($identifier,$params)
-	{
-		$params = array_merge(array('id'=>$identifier),$params);
-		$ret = $this->send('campaign','update',$params);
-		return $ret;
-	}
-	public function customFieldQuery($params)
-	{
-		$ret = $this->send('customField','query',$params);
-		return $ret;
-	}
-	public function customFieldRead($identifier)
-	{
-		$ret = $this->send('customField','create',array('id'=>$identifier));
-		return $ret;
-	}
-	public function customRedirectQuery($queryParameters=array())
-	{
-		$ret = $this->send('customRedirect','query',$queryParameters);
-		return $ret;
-	}
-	public function customRedirectRead($identifier)
-	{
-		$ret = $this->send('customRedirect','read',array('id'=>$identifier));
-		return $ret;
-	}
-	/**
-	 * formQuery
-	 * Query form forms in this account
-	 * @param unknown_type $parameters
-	 */
-	public function formQuery($parameters=array())
-	{
-		$ret = $this->send('form','query',$parameters);
-		return $ret;
-	}
-	/**
-	 * formRead
-	 * Read the details of a Pardot Form
-	 * Especially its embed code
-	 * @param unknown_type $identifier
-	 */
-	public function formRead($identifier)
-	{
-		$ret = $this->send('form','read',array('id'=>$identifier));
-		return $ret;
-	}
-	public function listCreate($parameters)
-	{
-		$ret = $this->send('list','create',$params);
-		return $ret;
-	}
-	public function listQuery($queryParameters=array())
-	{
-		$ret = $this->send('list','create',$queryParameters);
-		return $ret;
-	}
-	public function listRead($identifier)
-	{
-		$ret = $this->send('campaign','create',array('id'=>$identifier));
-		return $ret;
-	}
-	public function listUpdate($identifier,$parameters)
-	{
-		$params = array_merge(array('id'=>$identifier),$parameters);
-		$ret = $this->send('campaign','create',$params);
-		return $ret;
-	}
-	public function opportunityCreate($params)
-	{
-		$ret = $this->send('opportunity','create',$params);
-		return $ret;
-	}
-	public function opportunityQuery($queryParameters=array())
-	{
-		$ret = $this->send('opportunity','query',$queryParameters);
-		return $ret;
-	}
-	public function opportunityRead($identifier)
-	{
-		$params = array('id'=>$identifier);
-		$ret = $this->send('opportunity','read',$params);
-		return $ret;
-	}
-	public function opportunityUpdate($identifier,$params)
-	{
-		$params = array_merge(array('id'=>$identifier),$params);
-		$ret = $this->send('campaign','create',$params);
+		$ret = array();
+		$objects = $this->send($objectType,'query',$queryParams)->result;
+		foreach($objects as $name=>$object){
+			$ret[] = $object;
+		}
 		return $ret;
 	}
 
-	/**
-	 * prospectAssign
-	 * Enter description here ...
-	 * @param unknown_type $prospectIdentifier
-	 * @param unknown_type $userIdentifier
-	 */
-	public function prospectAssign($prospectIdentifier,$userIdentifier)
-	{
-		$params = array();
-		if (false && strpos($prospectIdentifier,'@')){//not available via assign
-			//this is an email address
-			$params['email']=$prospectIdentifier;
-		} else {
-			$params['id']=$prospectIdentifier;
-		}
-		if (false && strpos($userIdentifier,'@')){//not available via assign
-			//this is an email address
-			$params['user_email']=$prospectIdentifier;
-		} else {
-			$params['user_id']=$userIdentifier;
-		}
-		$ret = $this->send('prospect','assign',$params);
-		return $ret;
-
-	}
-	/**
-	 * prospectCreate
-	 * Creates a prospect in Pardot
-	 * @param array $arr an array of key=>values
-	 * @return SimpleXMLElement Pardot Prospect
-	 * Requires at least email=>test@test.com
-	 * see for more : http://developer.pardot.com/kb/api-version-3/using-prospects
-	 */
-	public function prospectCreate($arr){
-		$ret = $this->send('prospect','create',$arr);
-		return $ret;
-	}
-	/**
-	 * prospectGetByEmail
-	 * Fetches a prospect by email
-	 * @param str $email
-	 * @return SimpleXMLElement A Pardot Prospect
-	 */
-	public function prospectGetByEmail($email){
-		$ret = $this->send('prospect','read',array('email'=>$email));
-		return $ret;
-	}
-	/**
-	 * prospectGetById
-	 * Fetches a prospect by id
-	 * @param int $id
-	 * @return SimpleXMLElement A Pardot prospect
-	 */
-	public function prospectGetById($id){
-		$ret = $this->send('prospect','read',array('id'=>$id));
-		return $ret;
-	}
-	/**
-	 * prospectQuery
-	 * Enter description here ...
-	 * @param array $params Key Value Store ie Updated_After, Created_After
-	 * @return SimpleXMLElement A List of Prospects
-	 */
-	public function prospectQuery($params = array())
-	{
-		$ret = $this->send('prospect','query',$params);
-	}
-	/**
-	 * prospectUpdate
-	 * Updtes a prospect
-	 * @param str $identifier An email or integer to refer to the prospect
-	 * @param array $arr array of keys and values to update the prospect
-	 * @return SimpleXMLElement The Updated Prospect Record in Pardot
-	 */
-	public function prospectUpdate($identifier,$arr){
-		//is this an email or an id
-		$by = array('id'=>$identifier);//poorly structured else
-		if (strpos($identifier,'@')){
-			//this is an email address
-			$by = array('email'=>$identifier);
-		}
-		$ret = $this->send('prospect','update',array_merge($by,$arr));
-		return $ret;
-	}
-	/**
-	 * prospectUpsert
-	 * insert a prospect if not exist, otherwise update
-	 * @param array $arr
-	 * @return SimpleXMLElement Pardot Prospect
-	 * Requires at least an email=>test@test.com <field>=<fieldVale>
-	 */
-	public function prospectUpsert($arr){
-		$ret = $this->send('prospect','upsert',$arr);
-		return $ret;
-	}
-	public function userQuery($queryParameters)
-	{
-		$ret = $this->send('user','query',$queryParameters);
-		return $ret;
-	}
-	/**
-	 * userRead
-	 * Read the details about a user based on an identifier
-	 * @param unknown_type $identifier Pardot User Id or email address
-	 */
-	public function userRead($identifier)
-	{
-		if(strpos($identifier,'@')){
-			$params = array('email'=>$identifier);
-		} else {
-			$params = array('id'=>$identifier);
-		}
-		$ret = $this->send('user','read',$params);
-		return $ret;
-	}
-	public function visitorActivityQuery($queryParameters=array()){
-		$ret = $this->send('visitorActivity','query',$queryParameters);
-		return $ret;
-	}
-	public function visitorActivityRead($identifier){
-		$ret = $this->send('visitorActivity','read',array('id'=>$identifier));
-		return $ret;
-	}
-	/**
-	 * visitorAssign
-	 * Assigns a visitor to a prospect record
-	 * @param unknown_type $prospectIdentifier Email or Prospect Id
-	 * @return SimpleXMLElement Pardot Visitors
-	 */
-	public function visitorAssign($prospectIdentifier){
-		if(strpos($prospectIdentifier,'@')){
-			$params = array('prospect_email'=>$prospectIdentifier);
-		} else {
-			$params = array('prospect_id'=>$prospectIdentifier);
-		}
-		$ret = $this->send('visitor','assign',$params);
-		return $ret;
-	}
-	public function visitorQuery($queryParameters){
-		$ret = $this->send('visitor','query',$queryParameters);
-		return $ret;
-	}
-	/**
-	 * visitorRead
-	 * Reads the details about the visitors
-	 * @param unknown_type $identifier Pardot Visitor Id
-	 */
-	public function visitorRead($identifier)
-	{
-		$ret = $this->send('visitor','read',array('id'=>$identifier));
-		return $ret;
-	}
-	public function visitQuery($queryParameters=array()){
-		$ret = $this->send('visit','query',$queryParameters);
-		return $ret;
-	}
-	/**
-	 * visitRead
-	 * Tell the details about a visit. Which pages were views, etc.
-	 * @param unknown_type $identifier Pardot Visit Id
-	 */
-	public function visitRead($identifier){
-		$ret = $this->send('visit','read',array('id'=>$identifier));
-		return $ret;
-	}
 	/**
 	 * Send
 	 * @desc Sends a web request to the api
@@ -365,8 +188,7 @@ class PardotConnector
 			$output = array('output'=>$this->outputMode);
 			$parameters = array_merge($output,$parameters);
 		}
-
-		$url = $baseurl.$module.'/'.$version.$action.'?'.
+		$url = $baseurl.$module.'/'.$version.$action.'?';
 		$context = stream_context_create(array(
 			'http'	=> array(
 				'method'	=> 'POST',//never want to send credentials over GET
@@ -374,19 +196,15 @@ class PardotConnector
 				'content'	=> http_build_query($parameters),
 				'timeout'	=> 30.0, //in seconds
 				'user_agent'=> 'PardotPHPClient',
-				//'proxy'		=> '',
-				//'ignore_errors'	=> false,
-			)
+		//'proxy'		=> '',
+		//'ignore_errors'	=> false,
+		)
 		));
+
 		$res = file_get_contents($url,false,$context);
 		$ret = simplexml_load_string($res);
 		if ($ret->err){
 			throw new PardotConnectorException($ret->err.' '.$url.' '.http_build_query($parameters), '1');
-		}
-		if ($ret->result){//This is for all of our queries
-			return $ret->result;
-		} else if ($ret->$module){//This is for all of our CRUD functions
-			return $ret->$module;
 		}
 		return $ret;
 	}
