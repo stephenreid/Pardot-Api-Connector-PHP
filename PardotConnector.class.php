@@ -139,6 +139,7 @@ class PardotConnector
 		//gets a user api key back
 		if($username!=null){
 			$params = array('email'=>$username,'password'=>$password,'user_key'=>$userKey);
+			$this->userKey = $userKey;
 		} else {
 			$params = array('email'=>$this->email,'password'=>$this->password,'user_key'=>$this->userKey);
 		}
