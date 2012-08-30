@@ -159,7 +159,7 @@ class PardotConnector
 	private function baseQuery($objectType,$queryParams)
 	{
 		$ret = array();
-		$objects = $this->send($objectType,'query',$queryParams)->result;
+		$objects = $this->send($objectType,'query',$queryParams)->result->$objectType;
 		foreach($objects as $name=>$object){
 			$ret[] = $object;
 		}
