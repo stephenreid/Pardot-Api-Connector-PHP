@@ -187,13 +187,13 @@ class PardotConnector
 		if ($this->apiKey && $this->userKey){
 			$login = array('api_key'=>$this->apiKey,'user_key'=>$this->userKey);
 			$parameters = array_merge($login,$parameters);
-			$version.='do/';
+			$action = 'do/'.$action;
 		}
 		if($this->outputMode){
 			$output = array('output'=>$this->outputMode);
 			$parameters = array_merge($output,$parameters);
 		}
-		$url = $baseurl.$module.'/'.$version.$action.'?';
+		$url = $baseurl.$module.'/'.$version.$action;
 		$context = stream_context_create(array(
 			'http'	=> array(
 				'method'	=> 'POST',//never want to send credentials over GET
