@@ -7,8 +7,6 @@ and basic prospect actions.
 
 Prospect.class.php is a container for Prospects that sets all prospect data through a data array.
 
-If you are not thinking object oriented (you should be, PHP 5 has been here for a while) then 
-the examples in ProceduralEx.php might help you.
 
 About Pardot
 ------------
